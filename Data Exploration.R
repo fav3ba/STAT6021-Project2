@@ -39,7 +39,9 @@ contrasts(wines$color_of_wine)
 
 boxplot(wines$quality~wines$color_of_wine, xlab='Color of Wine', ylab='Quality Rating', main='Quality Rating by Wine Color')
 
-#new df (halfdata) that is from data indexed by rows of data, pick half
-#(no replacement default)
-#test_data<- wines[sample(nrow(wines), nrow(wines)*.1),]
+# splits all wine data into training and testing, 90% train, 10% test
+# set.seed(69) for if we want the split to be the same each time
+train_test_split<-sample.int(nrow(wines), floor(.9*nrow(wines)), replace = F)
+train<-wines[train_test_split, ]
+test<-wines[-train_test_split, ]
 

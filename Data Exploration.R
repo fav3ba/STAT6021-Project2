@@ -155,12 +155,17 @@ test<-wines[-train_test_split, ]
 #Print scatterplot matrix - too small? 
 pairs(wines, lower.panel=NULL)
 
-#correlations matrix
+#correlations matrix- only for MLR to see if predictors are related
 num.wines <- wines %>% 
   select(fixed.acidity, volatile.acidity, citric.acid, residual.sugar, chlorides, free.sulfur.dioxide,total.sulfur.dioxide, density, pH, sulphates, alcohol, quality)
 res.cor <- correlate(num.wines)
 res.cor
-
+#fixed acidity & density (.46)
+#density & residual sugar (.55)
+#total sulfur & residual sugar (.5)
+#free & total sulfur (.72)
+#density & alcohol (-.69)
+#quality & alcohol (.44)
 
 ##have R treat quality as categorical
 #not sure if this needs to be donw for each data set???
@@ -184,9 +189,9 @@ test$quality.binary<-factor(new.levels[test$quality]) ##add this new binary vari
 wines$quality.binary<-factor(new.levels[wines$quality]) ##add this new binary variable to data frame
 
 #be sure there are 
-nrow(wines[wines$quality.binary=="Good",])
-nrow(train[train$quality.binary=="Good",])
-nrow(test[test$quality.binary=="Good",])
+nrow(wines[wines$quality.binary=="Good",]) #1277 from all data
+nrow(train[train$quality.binary=="Good",]) #1140 in the training
+nrow(test[test$quality.binary=="Good",]) #137 in the test
 
 #recheck boxplots wioth binary qulaity
 #Fixed Acidity against quality -> good wines generally lower fixed acidity
@@ -198,7 +203,7 @@ boxplot(wines$volatile.acidity~wines$quality.binary, xlab='Binary Quality', ylab
 
 
 #Citric Acid against quality -> not much of a pattern?
-boxplot(wines$citric.acid~wines$quality.binary, xlab='Binary uality', ylab='Citric Acid', main='Citrtic Acid by Binary Quality')
+boxplot(wines$citric.acid~wines$quality.binary, xlab='Binary uality', ylab='Citric Acid', main='Citric Acid by Binary Quality')
 
 
 
@@ -237,3 +242,68 @@ boxplot(wines$alcohol~wines$quality.binary, xlab='Binary Quality', ylab='Alcohol
 
 # looks like alcohol, density, volatile acidity, chlorides? and citric acid may
 # differentiate most between good and bad wines. 
+
+#fit logistic model with proposed variables
+results<-glm(quality.binary~alcohol+density+volatile.acidity+chlorides+citric.acid, family= 'binomial', data= train)
+summary(results) 
+
+#is the model useful?
+#check to see if B's = 0 
+#testing all coefficients, use Delta G^2 test statistic
+#df = 5846(df of null deviance) - 5841(res deviance for full) = 5
+#H0: all Bs  = 0 (not useful)
+#HA: at least one B non zero (useful)
+#test stat delta G^2 = null deviance - residual devaince
+5769.3-4680.6
+#1088.7
+#qchisq(1-alpha, df)
+qchisq(.95, 5)
+#critical value = 11.0705
+#Delta G^2 > critical value -> reject null
+#want areas to the right so subtract from 1
+1-pchisq(results$null.deviance-results$deviance,5)
+#p = 0 , p < 0.05, reject the null- data supports that at least one 
+#of the coefficients is nonzero
+#model is useful
+
+
+#Wald Test- 
+#H0: B citric acid = 0 (not useful)
+#HA: B citric acid != 0 (useful)
+#z-stat: -0.865
+#p-value: 0.38710
+#p>0.05, fail to reject the null
+#citric acid not useful with other predictors in the model
+
+#call library to use ROCR
+library(ROCR)
+
+#set up for roc (false postive rate on x axis, true postive rate on y axis)
+preds<- predict(results, newdata=test, type='response')
+rates<-prediction(preds, test$quality.binary)
+roc_results<- performance(rates, measure = 'tpr', x.measure = 'fpr')
+#plot
+plot(roc_results)
+lines(x=c(0,1), y = c(0,1), col= 'red')
+
+#Because the ROC is above the diagonal (top left), this indicates that the model
+#performs better than randomly guessing. 
+
+
+
+#AUC (Area under the Curve)
+auc <- performance(rates, measure = 'auc')
+auc@y.values
+#AUC = 0.7843229 - since this value is greater than 0.5 this validates that the 
+#model performs better than randomly guessing. 
+
+
+
+#confusion matrix
+table(test$quality.binary, preds>0.5)
+#overall error rate: 105 + 25 / 488 + 25 + 105 + 32 = 130/650 = .2 
+#False Positive Rate: 25 / 488 + 25 = 25/513 = 0.04873
+#False Negative Rate: 105 /105 + 32 = 105/137 = 0.766
+#Sensitivity: 32 / 105 + 32 = 32/137 = 0.233
+#Specificity:   488/488 + 25 = 0.95127
+

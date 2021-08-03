@@ -1,9 +1,11 @@
 #STAT 6021 
 #Project 2
 
+library(tidyverse)
+library(corrr)
 
-
-#read in wehites data and add column with color of wine
+#set working directory
+#read in whites data and add column with color of wine
 whites<- read.csv('wineQualityWhites.csv', header=TRUE, sep=",")
 whites$color_of_wine<- 'white'
 
@@ -153,6 +155,85 @@ test<-wines[-train_test_split, ]
 #Print scatterplot matrix - too small? 
 pairs(wines, lower.panel=NULL)
 
-#correlations doesn't work because of categorical variable
-#bind variables of interest and then
-#cor(wines)
+#correlations matrix
+num.wines <- wines %>% 
+  select(fixed.acidity, volatile.acidity, citric.acid, residual.sugar, chlorides, free.sulfur.dioxide,total.sulfur.dioxide, density, pH, sulphates, alcohol, quality)
+res.cor <- correlate(num.wines)
+res.cor
+
+
+##have R treat quality as categorical
+#not sure if this needs to be donw for each data set???
+train$quality<-factor(train$quality) 
+is.factor(train$quality) 
+test$quality<-factor(test$quality) 
+is.factor(test$quality) 
+wines$quality<-factor(wines$quality) 
+is.factor(wines$quality)
+##check coding scheme
+contrasts(train$quality)
+contrasts(test$quality)
+levels(train$quality)
+levels(test$quality)
+contrasts(wines$quality)
+levels(wines$quality)
+##collapse 3-6 -> bad, 7-9 -> good
+new.levels<-c("Bad", "Bad", "Bad", "Bad", "Good", "Good", "Good") ##need to match up with the order
+train$quality.binary<-factor(new.levels[train$quality]) ##add this new binary variable to data frame
+test$quality.binary<-factor(new.levels[test$quality]) ##add this new binary variable to data frame
+wines$quality.binary<-factor(new.levels[wines$quality]) ##add this new binary variable to data frame
+
+#be sure there are 
+nrow(wines[wines$quality.binary=="Good",])
+nrow(train[train$quality.binary=="Good",])
+nrow(test[test$quality.binary=="Good",])
+
+#recheck boxplots wioth binary qulaity
+#Fixed Acidity against quality -> good wines generally lower fixed acidity
+boxplot(wines$fixed.acidity~wines$quality.binary, xlab='Binary Quality', ylab='Fixed Acidity', main='Fixed Acidity by Binary Quality')
+
+
+#Volatile Acidity against quality -> good wines lower volatile acidity
+boxplot(wines$volatile.acidity~wines$quality.binary, xlab='Binary Quality', ylab='Volatile Acidity', main='Volatile Acidity by Binary Quality')
+
+
+#Citric Acid against quality -> not much of a pattern?
+boxplot(wines$citric.acid~wines$quality.binary, xlab='Binary uality', ylab='Citric Acid', main='Citrtic Acid by Binary Quality')
+
+
+
+#Residual Sugar against quality -> no pattern? hard to tell
+boxplot(wines$residual.sugar~wines$quality.binary, xlab='Binary Quality', ylab='Residual Sugar', main='Residual Sugar by Binary Quality')
+
+
+#Chlorides against quality -> good wines less chlorides
+boxplot(wines$chlorides~wines$quality.binary, xlab='Binary Quality', ylab='Chlorides', main='Chlorides by Binary Quality')
+
+
+
+#Free Sulfur Dioxide against quality -> about the same
+boxplot(wines$free.sulfur.dioxide~wines$quality.binary, xlab='Binary Quality', ylab='Free Sulfur Dioxide', main='Free Sulfur Dioxide by Binary Quality')
+
+
+#Total Sulfur Dioxide against quality -> good wines have  less variance of total sulfur decreases 
+boxplot(wines$total.sulfur.dioxide~wines$quality.binary, xlab='Binary Quality', ylab='Total Sulfur Dioxide', main='Total Sulfur Dioxide by Binary Quality')
+
+
+#Density against quality -> good wines has lower density
+boxplot(wines$density~wines$quality.binary, xlab='Binary Quality', ylab='Density', main='Density by Binary Quality')
+
+
+
+#pH against quality -> same
+boxplot(wines$pH~wines$quality.binary, xlab='Binary Quality', ylab='pH', main='pH by Binary Quality')
+
+
+
+#sulphates against quality -> no pattern? 
+boxplot(wines$sulphates~wines$quality.binary, xlab='Binary Quality', ylab='Sulphates', main='Sulphates by Binary Quality')
+
+#alcohol against quality -> good wines have higher alcohol content
+boxplot(wines$alcohol~wines$quality.binary, xlab='Binary Quality', ylab='Alcohol', main='Alcohol by Binary Quality')
+
+# looks like alcohol, density, volatile acidity, chlorides? and citric acid may
+# differentiate most between good and bad wines. 

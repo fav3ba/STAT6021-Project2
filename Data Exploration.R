@@ -21,10 +21,10 @@ wines <- rbind(whites, reds)
 head(wines)
 tail(wines)
 
-# splits all wine data into training and testing, 90% train, 10% test
+# splits all wine data into training and testing, 50% train, 50% test
 # good idea to set.seed for now so we are all on same page with data
 set.seed(69) #for if we want the split to be the same each time
-train_test_split<-sample.int(nrow(wines), floor(.9*nrow(wines)), replace = F)
+train_test_split<-sample.int(nrow(wines), floor(.5*nrow(wines)), replace = F)
 train<-wines[train_test_split, ]
 test<-wines[-train_test_split, ]
 
@@ -32,6 +32,8 @@ test<-wines[-train_test_split, ]
 
 #Print scatterplot matrix - too small? 
 pairs(train, lower.panel=NULL)
+
+cor(train)
 
 #correlations matrix- only for MLR to see if predictors are related
 num.wines <- train %>% 

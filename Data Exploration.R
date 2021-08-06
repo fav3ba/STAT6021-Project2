@@ -80,6 +80,9 @@ boxplot(train$quality~train$color_of_wine, xlab='Color of Wine', ylab='Quality R
 hist(train$quality, xlab='Quality', ylab='Count', main='Quality')
 #roughly normal
 print('testing git')
+##test
+print('test')
+
 
 #fixed acidity against color -> red wines general higher fixed acidity
 boxplot(train$fixed.acidity~train$color_of_wine, xlab='Color of Wine', ylab='Fixed Acidity', main='Fixed Rating by Wine Color')

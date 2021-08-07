@@ -382,8 +382,9 @@ confint(auto, level= 0.95)
 
 #non of the p-values in auto show can be removed-> check VIFS for multicollinearity?
 library(faraway)
-vif(train[, c(1,2,3,4,5,6,7,8,9,10,11)]) 
-
+#Do the same thing- not sure why including wine color causes problems
+#vif(train[, c(1,2,3,4,5,6,7,8,9,10,11)]) 
+vif(train[-c(12:14)])
 #highest VIF are most representative of the other predictors
 #density 17.48
 #fixed.acidity = 5.64
@@ -438,3 +439,176 @@ auc@y.values
 #confusion matrix
 table(test$quality.binary, preds>0.5)
 #not much difference
+
+#checking out the VIF model
+
+#below is just me checking out the auto model
+summary(vifResults)
+#call library to use ROCR
+library(ROCR)
+
+#set up for roc (false positive rate on x axis, true postive rate on y axis)
+preds<- predict(vifResults, newdata=test, type='response')
+rates<-prediction(preds, test$quality.binary)
+roc_results<- performance(rates, measure = 'tpr', x.measure = 'fpr')
+#plot
+plot(roc_results)
+lines(x=c(0,1), y = c(0,1), col= 'red')
+
+#Because the ROC is above the diagonal (top left), this indicates that the model
+#performs better than randomly guessing. 
+
+
+
+#AUC (Area under the Curve)
+auc <- performance(rates, measure = 'auc')
+auc@y.values
+#AUC = 0.7831038 - since this value is greater than 0.5 this validates that the 
+#model performs better than randomly guessing. 
+
+
+
+#add next highest vif -> totalsulfur
+vifResults_totalsulfur <- glm(quality.binary~density + fixed.acidity + residual.sugar + alcohol+total.sulfur.dioxide, family = 'binomial', data = train)
+summary(vifResults_totalsulfur)
+
+#Wald test
+#H0: B for total sulfur = 0 (remove not useful)
+#HA: B != 0 (keep - useful)
+#p-value: 0.849569 - fail to reject the null
+#in the presence of other predictors, not useful drop total sulfur
+
+
+#add next highest vif -> pH
+#fit model with just those and use it as starting point for auto selection?
+vifResults_pH <- glm(quality.binary~density + fixed.acidity + residual.sugar + alcohol+pH, family = 'binomial', data = train)
+summary(vifResults_pH)
+
+#Wald test
+#H0: B for pH = 0 (remove not useful)
+#HA: B != 0 (keep - useful)
+#p-value: 1.9e-8 - reject the null
+#in the presence of other predictors, useful keep pH in model
+
+#add next highest vif -> free sulfur
+#fit model with just those and use it as starting point for auto selection?
+vifResults_pHsul <- glm(quality.binary~density + fixed.acidity + residual.sugar + alcohol+pH + free.sulfur.dioxide, family = 'binomial', data = train)
+summary(vifResults_pHsul)
+
+#Wald test
+#H0: B for free sulfur = 0 (remove not useful)
+#HA: B != 0 (keep - useful)
+#p-value: 9.97e-5 - reject the null
+#in the presence of other predictors, useful keep free sulfur in model
+
+#add next highest vif -> volatile acidity
+#fit model with just those and use it as starting point for auto selection?
+vifResults_pHsulva <- glm(quality.binary~density + fixed.acidity + residual.sugar + alcohol+pH + free.sulfur.dioxide +volatile.acidity, family = 'binomial', data = train)
+summary(vifResults_pHsulva)
+
+#Wald test
+#H0: B for volatile acidity = 0 (remove not useful)
+#HA: B != 0 (keep - useful)
+#p-value: 1.77e-15 - reject the null
+#in the presence of other predictors, useful keep voltile acidity in model
+
+#pause and see if subtantial increas in AUC
+#call library to use ROCR
+library(ROCR)
+
+#set up for roc (false positive rate on x axis, true postive rate on y axis)
+preds<- predict(vifResults_pHsulva, newdata=test, type='response')
+rates<-prediction(preds, test$quality.binary)
+roc_results<- performance(rates, measure = 'tpr', x.measure = 'fpr')
+#plot
+plot(roc_results)
+lines(x=c(0,1), y = c(0,1), col= 'red')
+
+#Because the ROC is above the diagonal (top left), this indicates that the model
+#performs better than randomly guessing. 
+
+
+
+#AUC (Area under the Curve)
+auc <- performance(rates, measure = 'auc')
+auc@y.values
+#AUC = 0.802508 - since this value is greater than 0.5 this validates that the 
+#model performs better than randomly guessing. 
+# at this point only increased about 2% is the complexity really worth it???
+
+
+#add next highest vif -> citric acid
+#fit model with just those and use it as starting point for auto selection?
+vifResults_pHsulvaca <- glm(quality.binary~density + fixed.acidity + residual.sugar + alcohol+pH + free.sulfur.dioxide +volatile.acidity +citric.acid, family = 'binomial', data = train)
+summary(vifResults_pHsulvaca)
+
+#Wald test
+#H0: B for citric acid = 0 (remove not useful)
+#HA: B != 0 (keep - useful)
+#p-value: 0.51933 - fail to reject the null
+#in the presence of other predictors, not useful - remove citric acid from model
+
+#add next highest vif -> sulphates
+#fit model with just those and use it as starting point for auto selection?
+vifResults_pHsulvas <- glm(quality.binary~density + fixed.acidity + residual.sugar + alcohol+pH + free.sulfur.dioxide +volatile.acidity+sulphates, family = 'binomial', data = train)
+summary(vifResults_pHsulvas)
+
+#Wald test
+#H0: B for sulphates = 0 (remove not useful)
+#HA: B != 0 (keep - useful)
+#p-value: 3.71e-8 - reject the null
+#in the presence of other predictors, useful keep sulphates in model
+
+#add next highest vif -> chlorides
+#fit model with just those and use it as starting point for auto selection?
+vifResults_pHsulvasc <- glm(quality.binary~density + fixed.acidity + residual.sugar + alcohol+pH + free.sulfur.dioxide +volatile.acidity+sulphates+chlorides, family = 'binomial', data = train)
+summary(vifResults_pHsulvasc)
+
+#Wald test
+#H0: B for chlorides = 0 (remove not useful)
+#HA: B != 0 (keep - useful)
+#p-value: 0.15861 - fail to reject the null
+#in the presence of other predictors, not useful remove chlorides from model
+
+#add next highest vif -> color
+#fit model with just those and use it as starting point for auto selection?
+vifResults_pHsulvascw <- glm(quality.binary~density + fixed.acidity + residual.sugar + alcohol+pH + free.sulfur.dioxide +volatile.acidity+sulphates+color_of_wine, family = 'binomial', data = train)
+summary(vifResults_pHsulvascw)
+
+#Wald test
+#H0: B for color_of_wine = 0 (remove not useful)
+#HA: B != 0 (keep - useful)
+#p-value: 0.000355 - reject the null
+#in the presence of other predictors, useful keep color of wine in model
+
+
+#renaming to make it easier
+vifResults_final <- glm(quality.binary~density + fixed.acidity + residual.sugar + alcohol+pH + free.sulfur.dioxide +volatile.acidity+sulphates+color_of_wine, family = 'binomial', data = train)
+summary(vifResults_final)
+
+#pause and see if substantial increase in AUC
+#call library to use ROCR
+#library(ROCR)
+
+#set up for roc (false positive rate on x axis, true postive rate on y axis)
+preds<- predict(vifResults_final, newdata=test, type='response')
+rates<-prediction(preds, test$quality.binary)
+roc_results<- performance(rates, measure = 'tpr', x.measure = 'fpr')
+#plot
+plot(roc_results)
+lines(x=c(0,1), y = c(0,1), col= 'red')
+
+#Because the ROC is above the diagonal (top left), this indicates that the model
+#performs better than randomly guessing. 
+
+
+
+#AUC (Area under the Curve)
+auc <- performance(rates, measure = 'auc')
+auc@y.values
+#AUC = 0.8123658 - since this value is greater than 0.5 this validates that the 
+#model performs better than randomly guessing. 
+# at this point only increased about 3% is the complexity really worth it???
+
+
+

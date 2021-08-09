@@ -3,7 +3,6 @@
 
 library(tidyverse)
 
-
 #set working directory
 #read in whites data and add column with color of wine
 whites<- read.csv('wineQualityWhites.csv', header=TRUE, sep=",")
@@ -24,13 +23,21 @@ wines <- subset(wines, select = -X )
 head(wines)
 tail(wines)
 
+##have R treat color of wine as categorical
+##check coding scheme
+# moved factoring earlier in code to do all at once
+wines$color_of_wine<-factor(wines$color_of_wine) 
+is.factor(wines$color_of_wine) 
+contrasts(wines$color_of_wine)
+levels(wines$color_of_wine)
+#red = 0 white=1
+
 # splits all wine data into training and testing, 50% train, 50% test
 # good idea to set.seed for now so we are all on same page with data
 set.seed(69) #for if we want the split to be the same each time
 train_test_split<-sample.int(nrow(wines), floor(.5*nrow(wines)), replace = F)
 train<-wines[train_test_split, ]
 test<-wines[-train_test_split, ]
-
 
 
 #Print scatterplot matrix - too small? 
@@ -45,22 +52,6 @@ cor(train)
 #free & total sulfur (.72)
 #density & alcohol (-.70)
 #quality & alcohol (.44)
-
-##have R treat color of wine as categorical
-##check coding scheme
-#not sure if this needs to be done for each data set???
-train$color_of_wine<-factor(train$color_of_wine) 
-is.factor(train$color_of_wine) 
-contrasts(train$color_of_wine)
-levels(train$color_of_wine)
-#red = 0 white=1
-
-test$color_of_wine<-factor(test$color_of_wine) 
-is.factor(test$color_of_wine) 
-contrasts(test$color_of_wine)
-levels(test$color_of_wine)
-
-
 
 #get an idea of summaries
 summary(train)

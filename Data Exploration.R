@@ -291,14 +291,6 @@ summary(results2)
 1-pchisq(results2$deviance-results$deviance, 2)
 #p=0.95, p> 0.05, fail to reject the null, go with reduced model
 
-#wald test to drop fixed acidity 
-#p= 0.9938, p > 0.05, fail to reject -> drop coefficent = 0
-
-results1<-glm(quality.binary~alcohol+density+volatile.acidity+chlorides+residual.sugar, family= 'binomial', data= train)
-summary(results1) 
-
-#wald test to drop residual sugar
-#p= 0.0.74988, p > 0.05, fail to reject -> drop coefficent = 0
 
 #fit logistic model without fixed acidity and residual sugar 
 results.nocitric<-glm(quality.binary~alcohol+density+volatile.acidity+chlorides, family= 'binomial', data= train)

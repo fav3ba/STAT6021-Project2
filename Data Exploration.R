@@ -2,6 +2,8 @@
 #Project 2
 
 library(tidyverse)
+library(faraway)
+library(ROCR)
 
 #set working directory
 #read in whites data and add column with color of wine
@@ -32,25 +34,6 @@ contrasts(wines$color_of_wine)
 levels(wines$color_of_wine)
 #red = 0 white=1
 
-##have R treat quality as categorical
-#moved this segment to before the data split
-wines$quality<-factor(wines$quality) 
-is.factor(wines$quality)
-
-##check coding scheme
-contrasts(wines$quality)
-levels(wines$quality)
-
-##collapse 3-6 -> bad, 7-9 -> good
-new.levels<-c("Low", "Low", "Low", "Low", "QHigh", "QHigh", "QHigh") ##need to match up with the order
-new.levels
-wines$quality.binary<-factor(new.levels[wines$quality]) ##add this new binary variable to data frame
-is.factor(wines$quality.binary)
-contrasts(wines$quality.binary)
- # low is now the reference class
-##add this new binary variable to data frame
-#low is the reference class - I used Qhigh so that Low would be reference- since
-#high quality should be seen as success- easier to interpret later
 
 # splits all wine data into training and testing, 50% train, 50% test
 # good idea to set.seed for now so we are all on same page with data
@@ -59,8 +42,6 @@ train_test_split<-sample.int(nrow(wines), floor(.5*nrow(wines)), replace = F)
 train<-wines[train_test_split, ]
 test<-wines[-train_test_split, ]
 
-nrow(train[train$quality.binary=="QHigh",]) #657 in the training
-nrow(test[test$quality.binary=="QHigh",]) #620 in the test
 
 #Print scatterplot matrix - too small? 
 #can see a bit better now-> what do you think look the most correlated?
@@ -81,7 +62,7 @@ str(train)
 
 #how many in each class
 nrow(train[train$color_of_wine == 0,]) #819 reds
-nrow(train[train$color_of_wine ==1,])  #2429 whites
+nrow(train[train$color_of_wine == 1,])  #2429 whites
 
 #=============== EDA ===========================
 
@@ -159,12 +140,9 @@ boxplot(train$free.sulfur.dioxide~train$quality, xlab='Quality', ylab='Free Sulf
 hist(train$free.sulfur.dioxide) #skewed right
 
 #Total Sulfur Dioxide against quality -> as quality increases, variance of total sulfur decreases 
-boxplot(train$total.sulfur.dioxide~train$quality, xlab='Quality', ylab='Free Sulfur Dioxide', main='Free Sulfur Dioxide by Quality')
+boxplot(train$total.sulfur.dioxide~train$quality, xlab='Quality', ylab='Total Sulfur Dioxide', main='Total Sulfur Dioxide by Quality')
 hist(train$total.sulfur.dioxide) #skewed left?
 
-#Volatile Acidity against quality -> as quality increases, volatile acidity decreases
-boxplot(train$volatile.acidity~train$quality, xlab='Quality', ylab='Volatile Acidity', main='Volatile Acidity by Quality')
-hist(train$volatile.acidity) #skewed right
 
 
 #Density against quality -> as quality increases, density decreases
@@ -186,9 +164,33 @@ boxplot(train$alcohol~train$quality, xlab='Quality', ylab='Alcohol', main='Alcoh
 hist(train$alcohol) #skewed right
 
 
-#be sure there are 
+
+##have R treat quality as categorical
+#not sure if this needs to be donw for each data set???
+train$quality<-factor(train$quality) 
+is.factor(train$quality) 
+test$quality<-factor(test$quality) 
+is.factor(test$quality) 
+
+##check coding scheme
+contrasts(train$quality)
+contrasts(test$quality)
+levels(train$quality)
+levels(test$quality)
+
+##collapse 3-6 -> bad, 7-9 -> good
+new.levels<-c("Low", "Low", "Low", "Low", "QHigh", "QHigh", "QHigh") ##need to match up with the order
+train$quality.binary<-factor(new.levels[train$quality]) ##add this new binary variable to data frame
+test$quality.binary<-factor(new.levels[test$quality]) ##add this new binary variable to data frame
+#low is the reference class - I used Qhigh so that Low would be reference- since
+#high quality should be seen as success- easier to interpret later
+summary(train)
+
+#be sure there are similar amounts
 nrow(train[train$quality.binary=="QHigh",]) #657 in the training
-nrow(test[test$quality.binary=="QHigh",]) #657 in the test
+nrow(test[test$quality.binary=="QHigh",]) #620 in the test
+
+
 
 #recheck boxplots with binary qulaity
 #Fixed Acidity against quality -> good wines generally lower fixed acidity
@@ -244,47 +246,59 @@ boxplot(train$alcohol~train$quality.binary, xlab='Binary Quality', ylab='Alcohol
 
 #================== start making the model ================================
 
-
-
-#fit logistic model with proposed variables
-results<-glm(quality.binary~alcohol+density+volatile.acidity+chlorides+citric.acid, family= 'binomial', data= train)
-summary(results) 
+#fit logistic model with proposed variables -> those most different by box plot
+resultsavd<-glm(quality.binary~alcohol+volatile.acidity+density, family= 'binomial', data= train)
+summary(resultsavd)
 
 #is the model useful?
 #check to see if B's = 0 
 #testing all coefficients, use Delta G^2 test statistic
-#df = 3247(df of null deviance) - 3242(res deviance for full) = 5
+#df = 3247(df of null deviance) - 3244(res deviance for full) = 3
 #H0: all Bs  = 0 (not useful)
 #HA: at least one B non zero (useful)
-#test stat delta G^2 = null deviance - residual devaince
-results$null.deviance-results$deviance #3271.0-2668.1
-#602.96
+#test stat delta G^2 = null deviance - residual deviance
+resultsavd$null.deviance-resultsavd$deviance 
+#595.99
 #qchisq(1-alpha, df)
-qchisq(.95, 5)
-#critical value = 11.0705
+qchisq(.95, 3)
+#critical value = 7.8147
 #Delta G^2 > critical value -> reject null
 #want areas to the right so subtract from 1
-1-pchisq(results$null.deviance-results$deviance,5)
+1-pchisq(resultsavd$null.deviance-resultsavd$deviance,3)
 #p = 0 , p < 0.05, reject the null- data supports that at least one 
 #of the coefficients is nonzero
 #model is useful
 
-#Wald Test- 
-#H0: B citric acid = 0 (not useful)
-#HA: B citric acid != 0 (useful)
-#z-stat: -0.641
-#p-value: 0.521346
-#p>0.05, fail to reject the null
-#citric acid not useful with other predictors in the model
+#wald test-> all significant -> dont drop any
 
 #fit logistic model with proposed variables
+results<-glm(quality.binary~alcohol+density+volatile.acidity+chlorides+fixed.acidity+residual.sugar, family= 'binomial', data= train)
+summary(results) 
+
+#check to see if reduced (without fixed acidity and residual sugar) model better
+#can a subset of predictors be dropped
+#df = 2 because looking to remove 2 predictors
+#H0: B for fixed acid = B for resid sugar = 0 (remove them- use reduced model)
+#HA: at least one B != 0 (don't remove, full model)
+1-pchisq(resultsavd$deviance-results$deviance, 2)
+#p=0.357, p> 0.05, fail to reject the null, go with reduced model
+#drop fixed acidity and residual sugar
+
+#fit logistic model without fixed acidity and residual sugar 
 results.nocitric<-glm(quality.binary~alcohol+density+volatile.acidity+chlorides, family= 'binomial', data= train)
 summary(results.nocitric) 
+#wald test-> all p values significant
+confint(results.nocitric, level= 0.95)
+
+#check VIFs 
+library(faraway)
+vif(train[, c(11,8,2,5)])
+
 
 #call library to use ROCR
 library(ROCR)
 
-#set up for roc (false positive rate on x axis, true positive rate on y axis)
+#set up for roc (false positive rate on x axis, true postive rate on y axis)
 preds<- predict(results.nocitric, newdata=test, type='response')
 rates<-prediction(preds, test$quality.binary)
 roc_results<- performance(rates, measure = 'tpr', x.measure = 'fpr')
@@ -294,6 +308,8 @@ lines(x=c(0,1), y = c(0,1), col= 'red')
 
 #Because the ROC is above the diagonal (top left), this indicates that the model
 #performs better than randomly guessing. 
+
+
 
 #AUC (Area under the Curve)
 auc <- performance(rates, measure = 'auc')
@@ -305,13 +321,30 @@ auc@y.values
 #low is failure, Qhigh is sucess 
 #confusion matrix
 table(test$quality.binary, preds>0.5)
-#overall error rate: 128 + 474 / 2501 + 128 + 474 + 146 =
-#False Positive Rate: 128 / 2501 + 128 = 128/2629 = 
-#False Negative Rate: 474 /474 + 146 = 474/620 = 
-#Sensitivity: 146 / 474+146 =  =
-#Specificity:   2501/2501 +128 = 2501/2629 = 
+#overall error rate: 128 + 474 / 2501 + 128 + 474 + 146 = 0.185
+#False Positive Rate: 128 / 2501 + 128 = 128/2629 = 0.0467
+#False Negative Rate: 474 /474 + 146 = 474/620 = 0.7645
+#Sensitivity: 146 / 474+146 = 0.235 
+#Specificity:   2501/2501 +128 = 2501/2629 = 0.995
 
+#looking at distribution of predictions
+hist(preds)
 
+table(test$quality.binary, preds>0.4)
+#overall error rate: 375 + 245 / 2361 + 268 + 375 + 245 = 0.19
+#False Positive Rate: 268 / (2361+268) = 128/2629 = 0.1
+#False Negative Rate: 375 /(375+245) = 0.6
+#Sensitivity: 245 /(375+245) = 0.395 
+#Specificity:   2361 / (2361+268) = 0.898
+
+table(test$quality.binary, preds>0.65)
+#overall error rate:(582 + 38) / (2597 + 32 + 582 + 38) = 0.19
+#False Positive Rate: 32 / (2597+32) = 128/2629 = 0.012
+#False Negative Rate: 582 /(582+38) = 0.939
+#Sensitivity: 38 /(582+38) = 0.061
+#Specificity:   2597 / (2597+32) = 0.988
+
+#======================= Auto's ==============================================
 
 #automates search using glm 
 
@@ -345,18 +378,17 @@ step(regnull, scope=list(lower=regnull, upper=regfull), direction='both')
 #kept alcohol, volatile acidity, sulphates, residual sugar, free sulfur,
 #total sulfur, chlorides, ph, fixed acidity, density and color
 
-step.model<- glm(quality.binary~alcohol + volatile.acidity + sulphates + residual.sugar + free.sulfur.dioxide + total.sulfur.dioxide + chlorides+pH + fixed.acidity + density + color_of_wine, family= 'binomial', data=train)
-
-step(step.model, scope=list(lower=regnull, upper=step.model), direction='backward')
-
 #can also specify starting position of stepwise more directly
 step(results.nocitric, scope=list(lower=regnull, upper=regfull), direction='both' )
 #same as other methods
 
-auto<- glm(quality.binary~alcohol + volatile.acidity + sulphates+ residual.sugar + free.sulfur.dioxide +total.sulfur.dioxide+chlorides+pH + fixed.acidity + density+color_of_wine, family= 'binomial', data=train)
+auto<- glm(quality.binary~alcohol + volatile.acidity + sulphates+ residual.sugar +
+             free.sulfur.dioxide +total.sulfur.dioxide+chlorides+pH + fixed.acidity+
+             density+color_of_wine, family= 'binomial', data=train)
 
 summary(auto)
 summary(results.nocitric)
+
 
 #check to see if can drop subset (since results.nocitric is a subset of auto)
 #test to see if can remove additional predictors (age & sex)
@@ -369,41 +401,21 @@ summary(results.nocitric)
 #confidence interval: none of them contain zero...
 confint(auto, level= 0.95)
 
-#non of the p-values in auto show can be removed-> check VIFS for multicollinearity?
+
+
+#none of the p-values in auto show can be removed-> check VIFS for multicollinearity?
 library(faraway)
-#Do the same thing- not sure why including wine color causes problems
-#vif(train[, c(1,2,3,4,5,6,7,8,9,10,11)]) 
-vif(train[-c(12:14)])
+#look at vifs for auto first?
+vif(train[, c(1,2,4,5,6,7,8,9,10,11)]) 
+
 #highest VIF are most representative of the other predictors
 #density 17.48
 #fixed.acidity = 5.64
 #residual sugar = 7.46
 #alcohol = 5.36
 
-#fit model with just those and use it as starting point for auto selection?
-vifResults <- glm(quality.binary~density + fixed.acidity + residual.sugar + alcohol, family = 'binomial', data = train)
-summary(vifResults)
 
-
-#can also specify starting position of stepwise more directly
-step(vifResults, scope=list(lower=regnull, upper=regfull), direction='both' )
-#same as other methods
-
-
-#is auto selection model useful? yes it is
-auto$null.deviance-auto$deviance
-#df = 11
-1-pchisq(auto$null.deviance-auto$deviance,11)
-#p-value 0 -> reject null -> this model is useful
-
-
-#Need to deal with VIF's 
-
-#below is just me checking out the auto model
-summary(auto)
-#call library to use ROCR
 library(ROCR)
-
 #set up for roc (false positive rate on x axis, true postive rate on y axis)
 preds<- predict(auto, newdata=test, type='response')
 rates<-prediction(preds, test$quality.binary)
@@ -415,6 +427,8 @@ lines(x=c(0,1), y = c(0,1), col= 'red')
 #Because the ROC is above the diagonal (top left), this indicates that the model
 #performs better than randomly guessing. 
 
+
+
 #AUC (Area under the Curve)
 auc <- performance(rates, measure = 'auc')
 auc@y.values
@@ -424,6 +438,7 @@ auc@y.values
 
 #low is failure, Qhigh is sucess 
 #confusion matrix
+table(test$quality.binary, preds>0.5)
 table(test$quality.binary, preds>0.6)
 # more concerned with false positive than false negative
 # threshold 0.5
@@ -441,170 +456,3 @@ table(test$quality.binary, preds>0.6)
 # Specificity:   2588/(2498 + 131) = 98.4%
 
 #not much difference
-
-#checking out the VIF model
-summary(vifResults)
-#call library to use ROCR
-library(ROCR)
-
-#set up for roc (false positive rate on x axis, true postive rate on y axis)
-preds<- predict(vifResults, newdata=test, type='response')
-rates<-prediction(preds, test$quality.binary)
-roc_results<- performance(rates, measure = 'tpr', x.measure = 'fpr')
-#plot
-plot(roc_results)
-lines(x=c(0,1), y = c(0,1), col= 'red')
-
-#Because the ROC is above the diagonal (top left), this indicates that the model
-#performs better than randomly guessing. 
-
-#AUC (Area under the Curve)
-auc <- performance(rates, measure = 'auc')
-auc@y.values
-#AUC = 0.7831038 - since this value is greater than 0.5 this validates that the 
-#model performs better than randomly guessing. 
-
-#add next highest vif -> totalsulfur
-vifResults_totalsulfur <- glm(quality.binary~density + fixed.acidity + residual.sugar + alcohol+total.sulfur.dioxide, family = 'binomial', data = train)
-summary(vifResults_totalsulfur)
-
-#Wald test
-#H0: B for total sulfur = 0 (remove not useful)
-#HA: B != 0 (keep - useful)
-#p-value: 0.849569 - fail to reject the null
-#in the presence of other predictors, not useful drop total sulfur
-
-
-#add next highest vif -> pH
-#fit model with just those and use it as starting point for auto selection?
-vifResults_pH <- glm(quality.binary~density + fixed.acidity + residual.sugar + alcohol+pH, family = 'binomial', data = train)
-summary(vifResults_pH)
-
-#Wald test
-#H0: B for pH = 0 (remove not useful)
-#HA: B != 0 (keep - useful)
-#p-value: 1.9e-8 - reject the null
-#in the presence of other predictors, useful keep pH in model
-
-#add next highest vif -> free sulfur
-#fit model with just those and use it as starting point for auto selection?
-vifResults_pHsul <- glm(quality.binary~density + fixed.acidity + residual.sugar + alcohol+pH + free.sulfur.dioxide, family = 'binomial', data = train)
-summary(vifResults_pHsul)
-
-#Wald test
-#H0: B for free sulfur = 0 (remove not useful)
-#HA: B != 0 (keep - useful)
-#p-value: 9.97e-5 - reject the null
-#in the presence of other predictors, useful keep free sulfur in model
-
-#add next highest vif -> volatile acidity
-#fit model with just those and use it as starting point for auto selection?
-vifResults_pHsulva <- glm(quality.binary~density + fixed.acidity + residual.sugar + alcohol+pH + free.sulfur.dioxide +volatile.acidity, family = 'binomial', data = train)
-summary(vifResults_pHsulva)
-
-#Wald test
-#H0: B for volatile acidity = 0 (remove not useful)
-#HA: B != 0 (keep - useful)
-#p-value: 1.77e-15 - reject the null
-#in the presence of other predictors, useful keep voltile acidity in model
-
-#pause and see if subtantial increas in AUC
-#call library to use ROCR
-library(ROCR)
-
-#set up for roc (false positive rate on x axis, true postive rate on y axis)
-preds<- predict(vifResults_pHsulva, newdata=test, type='response')
-rates<-prediction(preds, test$quality.binary)
-roc_results<- performance(rates, measure = 'tpr', x.measure = 'fpr')
-#plot
-plot(roc_results)
-lines(x=c(0,1), y = c(0,1), col= 'red')
-
-#Because the ROC is above the diagonal (top left), this indicates that the model
-#performs better than randomly guessing. 
-
-
-
-#AUC (Area under the Curve)
-auc <- performance(rates, measure = 'auc')
-auc@y.values
-#AUC = 0.802508 - since this value is greater than 0.5 this validates that the 
-#model performs better than randomly guessing. 
-# at this point only increased about 2% is the complexity really worth it???
-
-
-#add next highest vif -> citric acid
-#fit model with just those and use it as starting point for auto selection?
-vifResults_pHsulvaca <- glm(quality.binary~density + fixed.acidity + residual.sugar + alcohol+pH + free.sulfur.dioxide +volatile.acidity +citric.acid, family = 'binomial', data = train)
-summary(vifResults_pHsulvaca)
-
-#Wald test
-#H0: B for citric acid = 0 (remove not useful)
-#HA: B != 0 (keep - useful)
-#p-value: 0.51933 - fail to reject the null
-#in the presence of other predictors, not useful - remove citric acid from model
-
-#add next highest vif -> sulphates
-#fit model with just those and use it as starting point for auto selection?
-vifResults_pHsulvas <- glm(quality.binary~density + fixed.acidity + residual.sugar + alcohol+pH + free.sulfur.dioxide +volatile.acidity+sulphates, family = 'binomial', data = train)
-summary(vifResults_pHsulvas)
-
-#Wald test
-#H0: B for sulphates = 0 (remove not useful)
-#HA: B != 0 (keep - useful)
-#p-value: 3.71e-8 - reject the null
-#in the presence of other predictors, useful keep sulphates in model
-
-#add next highest vif -> chlorides
-#fit model with just those and use it as starting point for auto selection?
-vifResults_pHsulvasc <- glm(quality.binary~density + fixed.acidity + residual.sugar + alcohol+pH + free.sulfur.dioxide +volatile.acidity+sulphates+chlorides, family = 'binomial', data = train)
-summary(vifResults_pHsulvasc)
-
-#Wald test
-#H0: B for chlorides = 0 (remove not useful)
-#HA: B != 0 (keep - useful)
-#p-value: 0.15861 - fail to reject the null
-#in the presence of other predictors, not useful remove chlorides from model
-
-#add next highest vif -> color
-#fit model with just those and use it as starting point for auto selection?
-vifResults_pHsulvascw <- glm(quality.binary~density + fixed.acidity + residual.sugar + alcohol+pH + free.sulfur.dioxide +volatile.acidity+sulphates+color_of_wine, family = 'binomial', data = train)
-summary(vifResults_pHsulvascw)
-
-#Wald test
-#H0: B for color_of_wine = 0 (remove not useful)
-#HA: B != 0 (keep - useful)
-#p-value: 0.000355 - reject the null
-#in the presence of other predictors, useful keep color of wine in model
-
-
-#renaming to make it easier
-vifResults_final <- glm(quality.binary~density + fixed.acidity + residual.sugar + alcohol+pH + free.sulfur.dioxide +volatile.acidity+sulphates+color_of_wine, family = 'binomial', data = train)
-summary(vifResults_final)
-
-#pause and see if substantial increase in AUC
-#call library to use ROCR
-#library(ROCR)
-
-#set up for roc (false positive rate on x axis, true postive rate on y axis)
-preds<- predict(vifResults_final, newdata=test, type='response')
-rates<-prediction(preds, test$quality.binary)
-roc_results<- performance(rates, measure = 'tpr', x.measure = 'fpr')
-#plot
-plot(roc_results)
-lines(x=c(0,1), y = c(0,1), col= 'red')
-
-#Because the ROC is above the diagonal (top left), this indicates that the model
-#performs better than randomly guessing. 
-
-
-
-#AUC (Area under the Curve)
-auc <- performance(rates, measure = 'auc')
-auc@y.values
-#AUC = 0.8123658 - since this value is greater than 0.5 this validates that the 
-#model performs better than randomly guessing. 
-# at this point only increased about 3% is the complexity really worth it???
-
-
-

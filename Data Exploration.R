@@ -32,6 +32,22 @@ contrasts(wines$color_of_wine)
 levels(wines$color_of_wine)
 #red = 0 white=1
 
+##have R treat quality as categorical
+#moved this segment to before the data split
+wines$quality<-factor(wines$quality) 
+is.factor(wines$quality)
+
+##check coding scheme
+contrasts(wines$quality)
+levels(wines$quality)
+
+##collapse 3-6 -> bad, 7-9 -> good
+new.levels<-c("Low Quality", "Low Quality", "Low Quality", "Low Quality", "High Quality", "High Quality", "High Quality") ##need to match up with the order
+wines$quality.binary<-factor(new.levels[wines$quality]) ##add this new binary variable to data frame
+##add this new binary variable to data frame
+#low is the reference class - I used Qhigh so that Low would be reference- since
+#high quality should be seen as success- easier to interpret later
+
 # splits all wine data into training and testing, 50% train, 50% test
 # good idea to set.seed for now so we are all on same page with data
 set.seed(69) #for if we want the split to be the same each time
@@ -120,7 +136,7 @@ boxplot(train$volatile.acidity~train$quality, xlab='Quality', ylab='Volatile Aci
 hist(train$volatile.acidity) #skewed right
 
 #Citric Acid against quality -> not much of a pattern
-boxplot(train$citric.acid~train$quality, xlab='Quality', ylab='Citric Acid', main='Citrtic Acid by Quality')
+boxplot(train$citric.acid~train$quality, xlab='Quality', ylab='Citric Acid', main='Citric Acid by Quality')
 hist(train$citric.acid) #roughly normal? 
 
 
@@ -131,7 +147,6 @@ hist(train$residual.sugar) #skewed right
 #Chlorides against quality -> as quality increases, volatile acidity decreases
 boxplot(train$chlorides~train$quality, xlab='Quality', ylab='Chlorides', main='Chlorides by Quality')
 hist(train$chlorides) #skewed right
-
 
 #Free Sulfur Dioxide against quality -> as quality increases, free sulphur dioxide increases?
 boxplot(train$free.sulfur.dioxide~train$quality, xlab='Quality', ylab='Free Sulfur Dioxide', main='Free Sulfur Dioxide by Quality')
@@ -163,27 +178,6 @@ hist(train$sulphates) # approximately normal skewed right
 #alcohol against quality -> as quality increase, alcohol increases
 boxplot(train$alcohol~train$quality, xlab='Quality', ylab='Alcohol', main='Alcohol by Quality')
 hist(train$alcohol) #skewed right
-
-
-##have R treat quality as categorical
-#not sure if this needs to be donw for each data set???
-train$quality<-factor(train$quality) 
-is.factor(train$quality) 
-test$quality<-factor(test$quality) 
-is.factor(test$quality) 
-
-##check coding scheme
-contrasts(train$quality)
-contrasts(test$quality)
-levels(train$quality)
-levels(test$quality)
-
-##collapse 3-6 -> bad, 7-9 -> good
-new.levels<-c("Low", "Low", "Low", "Low", "QHigh", "QHigh", "QHigh") ##need to match up with the order
-train$quality.binary<-factor(new.levels[train$quality]) ##add this new binary variable to data frame
-test$quality.binary<-factor(new.levels[test$quality]) ##add this new binary variable to data frame
-#low is the reference class - I used Qhigh so that Low would be reference- since
-#high quality should be seen as success- easier to interpret later
 
 
 #be sure there are 

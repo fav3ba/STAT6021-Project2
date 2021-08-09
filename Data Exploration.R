@@ -279,13 +279,17 @@ qchisq(.95, 3)
 results<-glm(quality.binary~alcohol+density+volatile.acidity+chlorides+fixed.acidity+residual.sugar, family= 'binomial', data= train)
 summary(results) 
 
+#fit logistic model with proposed variables
+results2<-glm(quality.binary~alcohol+density+volatile.acidity+chlorides, family= 'binomial', data= train)
+summary(results2) 
+
 #check to see if reduced (without fixed acidity and residual sugar) model better
 #can a subset of predictors be dropped
 #df = 2 because looking to remove 2 predictors
 #H0: B for fixed acid = B for resid sugar = 0 (remove them- use reduced model)
 #HA: at least one B != 0 (don't remove, full model)
-1-pchisq(resultsavd$deviance-results$deviance, 2)
-#p=0.0357, p< 0.05, reject the null, go with full model
+1-pchisq(results2$deviance-results$deviance, 2)
+#p=0.95, p> 0.05, fail to reject the null, go with reduced model
 
 #wald test to drop fixed acidity 
 #p= 0.9938, p > 0.05, fail to reject -> drop coefficent = 0

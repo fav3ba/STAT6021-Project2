@@ -264,6 +264,10 @@ qchisq(.95, 3)
 #critical value = 7.8147
 #Delta G^2 > critical value -> reject null
 #want areas to the right so subtract from 1
+#testing all coefficients, use Delta G^2 test statistic
+#df = 3247(df of null deviance) - 3244(res deviance for full) = 3
+#H0: all Bs  = 0 (not useful)
+#HA: at least one B non zero (useful)
 1-pchisq(resultsavd$null.deviance-resultsavd$deviance,3)
 #p = 0 , p < 0.05, reject the null- data supports that at least one 
 #of the coefficients is nonzero
@@ -281,8 +285,16 @@ summary(results)
 #H0: B for fixed acid = B for resid sugar = 0 (remove them- use reduced model)
 #HA: at least one B != 0 (don't remove, full model)
 1-pchisq(resultsavd$deviance-results$deviance, 2)
-#p=0.357, p> 0.05, fail to reject the null, go with reduced model
-#drop fixed acidity and residual sugar
+#p=0.0357, p< 0.05, reject the null, go with full model
+
+#wald test to drop fixed acidity 
+#p= 0.9938, p > 0.05, fail to reject -> drop coefficent = 0
+
+results1<-glm(quality.binary~alcohol+density+volatile.acidity+chlorides+residual.sugar, family= 'binomial', data= train)
+summary(results1) 
+
+#wald test to drop residual sugar
+#p= 0.0.74988, p > 0.05, fail to reject -> drop coefficent = 0
 
 #fit logistic model without fixed acidity and residual sugar 
 results.nocitric<-glm(quality.binary~alcohol+density+volatile.acidity+chlorides, family= 'binomial', data= train)

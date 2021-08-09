@@ -42,8 +42,12 @@ contrasts(wines$quality)
 levels(wines$quality)
 
 ##collapse 3-6 -> bad, 7-9 -> good
-new.levels<-c("Low Quality", "Low Quality", "Low Quality", "Low Quality", "High Quality", "High Quality", "High Quality") ##need to match up with the order
+new.levels<-c("Low", "Low", "Low", "Low", "QHigh", "QHigh", "QHigh") ##need to match up with the order
+new.levels
 wines$quality.binary<-factor(new.levels[wines$quality]) ##add this new binary variable to data frame
+is.factor(wines$quality.binary)
+contrasts(wines$quality.binary)
+ # low is now the reference class
 ##add this new binary variable to data frame
 #low is the reference class - I used Qhigh so that Low would be reference- since
 #high quality should be seen as success- easier to interpret later
@@ -55,6 +59,8 @@ train_test_split<-sample.int(nrow(wines), floor(.5*nrow(wines)), replace = F)
 train<-wines[train_test_split, ]
 test<-wines[-train_test_split, ]
 
+nrow(train[train$quality.binary=="QHigh",]) #657 in the training
+nrow(test[test$quality.binary=="QHigh",]) #620 in the test
 
 #Print scatterplot matrix - too small? 
 #can see a bit better now-> what do you think look the most correlated?
@@ -263,7 +269,6 @@ qchisq(.95, 5)
 #of the coefficients is nonzero
 #model is useful
 
-
 #Wald Test- 
 #H0: B citric acid = 0 (not useful)
 #HA: B citric acid != 0 (useful)
@@ -279,7 +284,7 @@ summary(results.nocitric)
 #call library to use ROCR
 library(ROCR)
 
-#set up for roc (false positive rate on x axis, true postive rate on y axis)
+#set up for roc (false positive rate on x axis, true positive rate on y axis)
 preds<- predict(results.nocitric, newdata=test, type='response')
 rates<-prediction(preds, test$quality.binary)
 roc_results<- performance(rates, measure = 'tpr', x.measure = 'fpr')
@@ -289,8 +294,6 @@ lines(x=c(0,1), y = c(0,1), col= 'red')
 
 #Because the ROC is above the diagonal (top left), this indicates that the model
 #performs better than randomly guessing. 
-
-
 
 #AUC (Area under the Curve)
 auc <- performance(rates, measure = 'auc')
@@ -342,17 +345,18 @@ step(regnull, scope=list(lower=regnull, upper=regfull), direction='both')
 #kept alcohol, volatile acidity, sulphates, residual sugar, free sulfur,
 #total sulfur, chlorides, ph, fixed acidity, density and color
 
+step.model<- glm(quality.binary~alcohol + volatile.acidity + sulphates + residual.sugar + free.sulfur.dioxide + total.sulfur.dioxide + chlorides+pH + fixed.acidity + density + color_of_wine, family= 'binomial', data=train)
+
+step(step.model, scope=list(lower=regnull, upper=step.model), direction='backward')
+
 #can also specify starting position of stepwise more directly
 step(results.nocitric, scope=list(lower=regnull, upper=regfull), direction='both' )
 #same as other methods
 
-auto<- glm(quality.binary~alcohol + volatile.acidity + sulphates+ residual.sugar +
-             free.sulfur.dioxide +total.sulfur.dioxide+chlorides+pH + fixed.acidity+
-             density+color_of_wine, family= 'binomial', data=train)
+auto<- glm(quality.binary~alcohol + volatile.acidity + sulphates+ residual.sugar + free.sulfur.dioxide +total.sulfur.dioxide+chlorides+pH + fixed.acidity + density+color_of_wine, family= 'binomial', data=train)
 
 summary(auto)
 summary(results.nocitric)
-
 
 #check to see if can drop subset (since results.nocitric is a subset of auto)
 #test to see if can remove additional predictors (age & sex)
@@ -411,8 +415,6 @@ lines(x=c(0,1), y = c(0,1), col= 'red')
 #Because the ROC is above the diagonal (top left), this indicates that the model
 #performs better than randomly guessing. 
 
-
-
 #AUC (Area under the Curve)
 auc <- performance(rates, measure = 'auc')
 auc@y.values
@@ -426,8 +428,6 @@ table(test$quality.binary, preds>0.5)
 #not much difference
 
 #checking out the VIF model
-
-#below is just me checking out the auto model
 summary(vifResults)
 #call library to use ROCR
 library(ROCR)
@@ -443,15 +443,11 @@ lines(x=c(0,1), y = c(0,1), col= 'red')
 #Because the ROC is above the diagonal (top left), this indicates that the model
 #performs better than randomly guessing. 
 
-
-
 #AUC (Area under the Curve)
 auc <- performance(rates, measure = 'auc')
 auc@y.values
 #AUC = 0.7831038 - since this value is greater than 0.5 this validates that the 
 #model performs better than randomly guessing. 
-
-
 
 #add next highest vif -> totalsulfur
 vifResults_totalsulfur <- glm(quality.binary~density + fixed.acidity + residual.sugar + alcohol+total.sulfur.dioxide, family = 'binomial', data = train)

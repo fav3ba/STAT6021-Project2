@@ -424,7 +424,22 @@ auc@y.values
 
 #low is failure, Qhigh is sucess 
 #confusion matrix
-table(test$quality.binary, preds>0.5)
+table(test$quality.binary, preds>0.6)
+# more concerned with false positive than false negative
+# threshold 0.5
+# overall error rate: (131 + 446) / (2498 + 131 + 446 + 174) = 17.8%
+# False Positive Rate: 131 / (2498 + 131) = 5.0%
+# False Negative Rate: 446 /(446 + 174) = 71.9%
+# Sensitivity: 174/(446+174) = 28.1%
+# Specificity:   2501/(2498 + 131) = 95.1%
+
+# threshold 0.6
+# overall error rate: (41 + 515) / (2498 + 131 + 446 + 174) = 17.1%
+# False Positive Rate: 41 / (2498 + 131) = 1.6%
+# False Negative Rate: 515 /(446 + 174) = 83.1%
+# Sensitivity: 105/(446+174) = 16.9%
+# Specificity:   2588/(2498 + 131) = 98.4%
+
 #not much difference
 
 #checking out the VIF model

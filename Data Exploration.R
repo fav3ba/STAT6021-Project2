@@ -464,3 +464,13 @@ table(test$quality.binary, preds>0.6)
 # Specificity:   2588/(2498 + 131) = 98.4%
 
 #not much difference
+n<-length(train)
+p<-5
+
+COOKS<-cooks.distance(results2)
+COOKS[COOKS>qf(0.5,p,n-p)]
+
+p<-12
+
+COOKS<-cooks.distance(auto)
+COOKS[COOKS>qf(0.5,p,n-p)]

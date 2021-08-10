@@ -311,7 +311,7 @@ preds<- predict(results.nocitric, newdata=test, type='response')
 rates<-prediction(preds, test$quality.binary)
 roc_results<- performance(rates, measure = 'tpr', x.measure = 'fpr')
 #plot
-plot(roc_results)
+plot(roc_results, main= "Alcohol, Density, Volatile Acidity and Chlorides ROC")
 lines(x=c(0,1), y = c(0,1), col= 'red')
 
 #Because the ROC is above the diagonal (top left), this indicates that the model
@@ -329,22 +329,46 @@ auc@y.values
 #low is failure, Qhigh is sucess 
 #confusion matrix
 table(test$quality.binary, preds>0.5)
-#overall error rate: (128 + 474) / (2501 + 128 + 474 + 146) = 18.5%
-#False Positive Rate: 128 / (2501 + 128) = 4.9%
-#False Negative Rate: 474 /(474 + 146)  = 76.5%
-#Sensitivity: 146 / (474+146) = 23.5%
-#Specificity:   2501/(2501 +128) = 95.1%
-
-table(test$quality.binary, preds>0.54)
-#overall error rate: (89 + 503) / (2501 + 128 + 474 + 146) = 18.2%
-#False Positive Rate: 89 / (2501 + 128) = 3.4%
-#False Negative Rate: 503 /(474 + 146) = 81%
-#Sensitivity: 117/ (474+146) = 18.9%
-#Specificity:   2540/(2501 +128) = 2501/2629 = 96.6%
+#overall error rate: 
+#128 + 474 / 2501 + 128 + 474 + 146 = 0.185
+#False Positive Rate: 
+#128 / 2501 + 128 = 0.0467
+#False Negative Rate:
+#474 /474 + 146 = 0.7645
+#Sensitivity: 
+#146 / 474+146 = 0.235 
+#Specificity:   
+#2501/2501 +128 = 0.995
 
 #looking at distribution of predictions
 hist(preds)
 
+table(test$quality.binary, preds>0.4)
+#overall error rate: 375 + 245 / 2361 + 268 + 375 + 245 = 0.19
+#False Positive Rate: 268 / (2361+268) = 128/2629 = 0.1
+#False Negative Rate: 375 /(375+245) = 0.6
+#Sensitivity: 245 /(375+245) = 0.395 
+#Specificity:   2361 / (2361+268) = 0.898
+
+table(test$quality.binary, preds>0.54)
+#overall error rate:
+#(503 + 89) / (2540 + 89 + 503 + 117) = 0.182
+#False Positive Rate:
+#89 / (2540 + 89) = 0.0338
+#False Negative Rate: 
+#503 /(503 + 117) = 0.811
+#Sensitivity: 
+#117 /(503 + 117) = 0.189
+#Specificity:  
+#2540 / (2540 + 89) = 0.966
+
+
+table(test$quality.binary, preds>0.6)
+#overall error rate:(582 + 38) / (2597 + 32 + 582 + 38) = 0.19
+#False Positive Rate: 32 / (2597+32) = 128/2629 = 0.012
+#False Negative Rate: 582 /(582+38) = 0.939
+#Sensitivity: 38 /(582+38) = 0.061
+#Specificity:   2597 / (2597+32) = 0.988
 #======================= Auto's ==============================================
 
 #automates search using glm 
@@ -362,7 +386,7 @@ regfull<- glm(quality.binary~fixed.acidity + volatile.acidity + citric.acid + re
 #list all predictors to exclude quality (non binary)
 #looked at summary to be sure it worked
 summary(regfull)
-?step
+#?step
 #autosearch procredures
 #forward: starts w/ int only model  and adds lowest AIC??
 step(regnull, scope= list(lower=regnull, upper=regfull), direction='forward')
@@ -390,10 +414,29 @@ auto<- glm(quality.binary~alcohol + volatile.acidity + sulphates+ residual.sugar
 summary(auto)
 summary(results.nocitric)
 
+#is the model useful?
+#check to see if B's = 0 
+#testing all coefficients, use Delta G^2 test statistic
+#df = 3247(df of null deviance) - 3236(res deviance for full) = 11
+#H0: all Bs  = 0 (not useful)
+#HA: at least one B non zero (useful)
+#test stat delta G^2 = null deviance - residual deviance
+auto$null.deviance-auto$deviance 
+#675.36
+#qchisq(1-alpha, df)
+qchisq(.95, 11)
+#critical value = 19.68
+#Delta G^2 > critical value -> reject null
+#want areas to the right so subtract from 1
+#H0: all Bs  = 0 (not useful)
+#HA: at least one B non zero (useful)
+1-pchisq(auto$null.deviance-auto$deviance,11)
+#p = 0 , p < 0.05, reject the null- data supports that at least one 
+#of the coefficients is nonzero
+#model is useful
 
 #check to see if can drop subset (since results.nocitric is a subset of auto)
-#test to see if can remove additional predictors (age & sex)
-#df = 12-5 = 7 becasue looking to remove 2 predictors
+#df =3243 - 3236 = 7 because looking to remove 7 predictors
 #H0: B for sulphates, resid sugar, free sulfur, total sulfur, pH fixed acidty and color = 0 (remove them- use reduced model)
 #HA: at least one B != 0 (don't remove, full model)
 1-pchisq(results.nocitric$deviance-auto$deviance, 7)
@@ -457,13 +500,18 @@ table(test$quality.binary, preds>0.6)
 # Specificity:   2588/(2498 + 131) = 98.4%
 
 #not much difference
-n<-length(train)
-p<-5
+
+
+#Checking for influential points -> cooks didn't return anything
+n<-length(test$quality.binary)
+p1<-5
 
 COOKS<-cooks.distance(results2)
-COOKS[COOKS>qf(0.5,p,n-p)]
+COOKS[COOKS>qf(0.5,p1,n-p1)]
 
-p<-12
 
-COOKS<-cooks.distance(auto)
-COOKS[COOKS>qf(0.5,p,n-p)]
+p2<-12
+
+COOKSA<-cooks.distance(auto)
+COOKSA[COOKSA>qf(0.5,p2,n-p2)]
+

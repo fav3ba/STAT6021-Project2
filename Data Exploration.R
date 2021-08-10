@@ -345,20 +345,6 @@ table(test$quality.binary, preds>0.54)
 #looking at distribution of predictions
 hist(preds)
 
-table(test$quality.binary, preds>0.4)
-#overall error rate: 375 + 245 / 2361 + 268 + 375 + 245 = 0.19
-#False Positive Rate: 268 / (2361+268) = 128/2629 = 0.1
-#False Negative Rate: 375 /(375+245) = 0.6
-#Sensitivity: 245 /(375+245) = 0.395 
-#Specificity:   2361 / (2361+268) = 0.898
-
-table(test$quality.binary, preds>0.65)
-#overall error rate:(582 + 38) / (2597 + 32 + 582 + 38) = 0.19
-#False Positive Rate: 32 / (2597+32) = 128/2629 = 0.012
-#False Negative Rate: 582 /(582+38) = 0.939
-#Sensitivity: 38 /(582+38) = 0.061
-#Specificity:   2597 / (2597+32) = 0.988
-
 #======================= Auto's ==============================================
 
 #automates search using glm 

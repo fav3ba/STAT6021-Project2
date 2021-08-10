@@ -329,11 +329,18 @@ auc@y.values
 #low is failure, Qhigh is sucess 
 #confusion matrix
 table(test$quality.binary, preds>0.5)
-#overall error rate: 128 + 474 / 2501 + 128 + 474 + 146 = 0.185
-#False Positive Rate: 128 / 2501 + 128 = 128/2629 = 0.0467
-#False Negative Rate: 474 /474 + 146 = 474/620 = 0.7645
-#Sensitivity: 146 / 474+146 = 0.235 
-#Specificity:   2501/2501 +128 = 2501/2629 = 0.995
+#overall error rate: (128 + 474) / (2501 + 128 + 474 + 146) = 18.5%
+#False Positive Rate: 128 / (2501 + 128) = 4.9%
+#False Negative Rate: 474 /(474 + 146)  = 76.5%
+#Sensitivity: 146 / (474+146) = 23.5%
+#Specificity:   2501/(2501 +128) = 95.1%
+
+table(test$quality.binary, preds>0.54)
+#overall error rate: (89 + 503) / (2501 + 128 + 474 + 146) = 18.2%
+#False Positive Rate: 89 / (2501 + 128) = 3.4%
+#False Negative Rate: 503 /(474 + 146) = 81%
+#Sensitivity: 117/ (474+146) = 18.9%
+#Specificity:   2540/(2501 +128) = 2501/2629 = 96.6%
 
 #looking at distribution of predictions
 hist(preds)
